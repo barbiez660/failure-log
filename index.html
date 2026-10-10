@@ -1,0 +1,295 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#111014">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<title>Failure Log</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Anton&family=Figtree:wght@400;500;700&display=swap">
+<style>
+/* Layout: one-column phone app like a game-tape review room. Sticky scoreboard header, cards, big red log button, bottom tabs. Single committed dark look. */
+:root{
+  --bg:#111014; --panel:#1C1A21; --panel2:#26232D; --line:#38343F;
+  --ink:#FFFFFF; --muted:#ABA5B5; --dark:#111014;
+  --red:#FF3B3B; --gold:#FFC72C; --green:#3DFFA0; --cyan:#29D9FF; --pink:#FF4FB3; --orange:#FF7A1A; --violet:#A98BFF;
+  --display:"Anton","Impact","Arial Narrow",sans-serif;
+  --body:"Figtree",system-ui,-apple-system,"Segoe UI",sans-serif;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0}
+body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:16px;line-height:1.45;-webkit-tap-highlight-color:transparent}
+.app{max-width:540px;margin:0 auto;padding-inline:16px;padding-block:0 120px}
+header{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--bg);padding-block:14px 12px;border-bottom:1px solid var(--line)}
+.brand{display:flex;align-items:baseline;justify-content:space-between;gap:10px}
+h1{font-family:var(--display);font-weight:400;font-size:30px;letter-spacing:.02em;margin:0;text-transform:uppercase;line-height:1}
+h1 span{color:var(--red)}
+.date{color:var(--muted);font-size:13px}
+.score{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:12px}
+.score div{background:var(--panel);border-radius:12px;padding:8px 10px;border-top:4px solid var(--c)}
+.score b{font-family:var(--display);font-weight:400;font-size:26px;display:block;line-height:1.1;font-variant-numeric:tabular-nums}
+.score span{color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.06em}
+main{display:flex;flex-direction:column;gap:14px;padding-top:14px}
+.banner{background:var(--gold);color:var(--dark);border-radius:16px;padding:14px 16px;font-weight:700;display:flex;flex-direction:column;gap:4px}
+.banner small{font-weight:500}
+button{font:inherit;cursor:pointer;border:0;color:inherit}
+.big{width:100%;min-height:56px;border-radius:16px;background:var(--red);color:#fff;font-family:var(--display);font-size:22px;letter-spacing:.04em;text-transform:uppercase}
+.chips{display:flex;gap:8px;overflow-x:auto;padding-bottom:2px;scrollbar-width:none}
+.chips::-webkit-scrollbar{display:none}
+.chip{flex:none;border-radius:999px;padding:8px 14px;background:var(--panel2);color:var(--ink);font-weight:700;font-size:13px;border:2px solid var(--c,var(--line))}
+.chip.on{background:var(--c,var(--ink));color:var(--dark)}
+.search{width:100%;background:var(--panel);border:2px solid var(--line);border-radius:12px;padding:10px 12px;color:var(--ink);font:inherit}
+.search:focus,.field:focus{outline:none;border-color:var(--gold)}
+.card{background:var(--panel);border-radius:18px;padding:16px;display:flex;flex-direction:column;gap:10px;border-left:6px solid var(--c);border-radius:0 18px 18px 0}
+.ctop{display:flex;gap:10px;align-items:flex-start}
+.ctop h3{margin:0;font-size:17px;font-weight:700;line-height:1.3;flex:1;min-width:0;overflow-wrap:anywhere}
+.tag{flex:none;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;border-radius:6px;padding:3px 7px;background:var(--c);color:var(--dark)}
+.meta{color:var(--muted);font-size:13px;display:flex;gap:10px;flex-wrap:wrap}
+.row{display:flex;flex-direction:column;gap:2px}
+.row em{font-style:normal;font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.row p{margin:0;font-size:15px;overflow-wrap:anywhere}
+.lesson{background:var(--panel2);border-radius:12px;padding:10px 12px}
+.lesson em{color:var(--gold)}
+.fix em{color:var(--green)}
+.status{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:700;border-radius:999px;padding:4px 10px}
+.st-rep{background:var(--red);color:#fff}
+.st-watch{background:var(--gold);color:var(--dark)}
+.st-ok{background:var(--green);color:var(--dark)}
+.acts{display:flex;gap:8px;flex-wrap:wrap}
+.a{flex:1 1 110px;min-height:44px;border-radius:12px;background:var(--panel2);font-weight:700;font-size:14px;padding:8px 10px;border:2px solid var(--line)}
+.a.again{border-color:var(--red);color:var(--red)}
+.a.dang{background:var(--red);color:#fff;border-color:var(--red)}
+.reps{display:flex;gap:4px;flex-wrap:wrap}
+.reps i{width:12px;height:12px;border-radius:3px;background:var(--red)}
+form{display:flex;flex-direction:column;gap:14px}
+label{display:flex;flex-direction:column;gap:6px;font-weight:700;font-size:14px}
+label small{color:var(--muted);font-weight:500}
+.field{width:100%;background:var(--panel);border:2px solid var(--line);border-radius:12px;padding:12px;color:var(--ink);font:inherit;font-weight:400}
+textarea.field{min-height:84px;resize:vertical}
+.whys{display:flex;flex-direction:column;gap:8px}
+.link{background:none;color:var(--cyan);font-weight:700;font-size:14px;padding:4px 0;align-self:flex-start}
+.err{color:var(--red);font-size:13px;font-weight:700;margin:-6px 0 0}
+.formhead{display:flex;justify-content:space-between;align-items:center}
+.formhead h2{font-family:var(--display);font-weight:400;font-size:24px;text-transform:uppercase;margin:0}
+.empty{background:var(--panel);border:2px dashed var(--line);border-radius:18px;padding:20px;text-align:center;color:var(--muted)}
+.empty b{display:block;color:var(--ink);font-size:17px;margin-bottom:4px}
+.bars{display:flex;flex-direction:column;gap:8px}
+.bar{display:grid;grid-template-columns:90px 1fr 28px;gap:8px;align-items:center;font-size:13px}
+.bar .t{height:14px;border-radius:7px;background:var(--panel2);overflow:hidden}
+.bar .t i{display:block;height:100%;background:var(--c);border-radius:7px}
+.bar b{text-align:right;font-variant-numeric:tabular-nums}
+.box{background:var(--panel);border-radius:18px;padding:16px;display:flex;flex-direction:column;gap:12px}
+.box h2{font-family:var(--display);font-weight:400;font-size:20px;text-transform:uppercase;margin:0;letter-spacing:.02em}
+.quote{font-size:15px;color:var(--muted);border-left:4px solid var(--gold);padding-left:12px;margin:0}
+.save{font-size:11px;color:var(--muted);text-align:center}
+nav{position:fixed;left:0;right:0;bottom:0;z-index:6;background:var(--panel);border-top:1px solid var(--line);padding:8px 8px calc(8px + env(safe-area-inset-bottom,0px));display:flex;justify-content:center}
+nav .in{display:flex;gap:6px;max-width:540px;width:100%}
+.tab{flex:1;background:transparent;color:var(--muted);border-radius:12px;padding:10px 4px;font-weight:700;font-size:13px}
+.tab.on{background:var(--red);color:#fff}
+.toast{position:fixed;left:50%;bottom:calc(84px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--gold);color:var(--dark);font-weight:700;padding:10px 16px;border-radius:999px;z-index:9}
+button:focus-visible,.field:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
+@media (prefers-reduced-motion:no-preference){.card,.a,.big{transition:transform .1s}.a:active,.big:active{transform:scale(.97)}}
+</style>
+</head><body>
+<div class="app">
+  <header>
+    <div class="brand"><h1>Failure <span>Log</span></h1><span class="date" id="hDate"></span></div>
+    <div class="score">
+      <div style="--c:var(--cyan)"><b id="sTotal">0</b><span>Logged</span></div>
+      <div style="--c:var(--green)"><b id="sLearned">0</b><span>Learned</span></div>
+      <div style="--c:var(--red)"><b id="sRep">0</b><span>Repeating</span></div>
+    </div>
+  </header>
+  <main id="view"></main>
+  <p class="save" id="saveState">Saved on this phone</p>
+</div>
+<nav><div class="in">
+  <button class="tab on" data-t="log" id="t-log">Log</button>
+  <button class="tab" data-t="add" id="t-add">+ New</button>
+  <button class="tab" data-t="review" id="t-review">Review</button>
+</div></nav>
+<input type="file" id="restoreFile" accept=".json,application/json" hidden>
+
+<script>
+const AREAS = [
+  {k:'wake', n:'Waking', c:'var(--orange)'},
+  {k:'web', n:'Website', c:'var(--cyan)'},
+  {k:'code', n:'Coding', c:'var(--pink)'},
+  {k:'speak', n:'Speaking', c:'var(--green)'},
+  {k:'work', n:'Work', c:'var(--violet)'},
+  {k:'life', n:'Life', c:'var(--gold)'}
+];
+const area = k => AREAS.find(a => a.k === k) || AREAS[5];
+const QUOTE = 'Review the tape. Name the mistake. Fix one thing. Go again.';
+
+let S = {items: []};
+let tab = 'log', filter = 'all', query = '', editing = null, confirmDel = null, whyCount = 1;
+
+const iso = d => { const z = new Date(d.getTime() - d.getTimezoneOffset()*60000); return z.toISOString().slice(0,10); };
+const today = () => iso(new Date());
+const daysSince = s => Math.round((Date.parse(today()+'T12:00:00') - Date.parse(s+'T12:00:00'))/864e5);
+const fmt = s => new Date(s+'T12:00:00').toLocaleDateString(undefined,{day:'numeric', month:'short', year:'numeric'});
+const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2,6);
+
+function status(it){
+  const last = it.repeats.length ? it.repeats[it.repeats.length-1] : it.date;
+  if(it.repeats.length && daysSince(last) < 14) return ['rep','Repeating · ' + (it.repeats.length+1) + 'x'];
+  if(daysSince(last) >= 14) return ['ok','Learned · ' + daysSince(last) + ' days clean'];
+  return ['watch','Watching · ' + daysSince(last) + ' of 14 days'];
+}
+
+function load(){ try{ const v = localStorage.getItem('failure-log'); if(v) S = JSON.parse(v); }catch(e){} if(!Array.isArray(S.items)) S.items = []; }
+function save(){ try{ localStorage.setItem('failure-log', JSON.stringify(S)); setSave('Saved on this phone'); }catch(e){ setSave('Could not save. Phone storage may be full.'); } }
+function setSave(t){ document.getElementById('saveState').textContent = t; }
+function toast(t){ const d = document.createElement('div'); d.className = 'toast'; d.textContent = t; document.body.appendChild(d); setTimeout(() => d.remove(), 2200); }
+
+function score(){
+  const st = S.items.map(status);
+  document.getElementById('sTotal').textContent = S.items.length;
+  document.getElementById('sLearned').textContent = st.filter(s => s[0]==='ok').length;
+  document.getElementById('sRep').textContent = st.filter(s => s[0]==='rep').length;
+  document.getElementById('hDate').textContent = new Date().toLocaleDateString(undefined,{weekday:'short', day:'numeric', month:'short'});
+}
+
+function card(it){
+  const a = area(it.area), [sk, sl] = status(it);
+  const whys = (it.whys || []).filter(Boolean);
+  let h = `<article class="card" style="--c:${a.c}">
+    <div class="ctop"><h3>${esc(it.what)}</h3><span class="tag">${a.n}</span></div>
+    <div class="meta"><span>${fmt(it.date)}</span><span class="status st-${sk}">${sl}</span></div>`;
+  whys.forEach((w,i) => h += `<div class="row"><em>${i===0?'Why it happened':'Why, deeper'}</em><p>${esc(w)}</p></div>`);
+  h += `<div class="row lesson"><em>Lesson</em><p>${esc(it.lesson)}</p></div>`;
+  if(it.fix) h += `<div class="row fix"><em>Next time I will</em><p>${esc(it.fix)}</p></div>`;
+  if(it.repeats.length) h += `<div class="row"><em>Happened again</em><div class="reps">${it.repeats.map(d=>`<i title="${d}"></i>`).join('')}</div><p class="meta">Last: ${fmt(it.repeats[it.repeats.length-1])}</p></div>`;
+  if(confirmDel === it.id){
+    h += `<div class="acts"><button class="a dang" data-del-yes="${it.id}">Yes, delete</button><button class="a" data-del-no="1">Keep it</button></div>`;
+  } else {
+    h += `<div class="acts"><button class="a again" data-again="${it.id}">It happened again</button><button class="a" data-edit="${it.id}">Edit</button><button class="a" data-del="${it.id}">Delete</button></div>`;
+  }
+  return h + `</article>`;
+}
+
+function vLog(){
+  let h = '';
+  const loggedToday = S.items.some(i => i.date === today() || i.repeats.includes(today()));
+  if(!loggedToday && S.items.length) h += `<div class="banner">Tonight's tape review<small>What went wrong today? One honest line is enough.</small></div>`;
+  h += `<button class="big" data-t="add">+ Log a failure</button>`;
+  if(!S.items.length){
+    return h + `<div class="empty"><b>No failures logged yet</b>Tap "Log a failure" and write what went wrong, why it happened, and the lesson. Each failure you log shows up here as a card you can mark if it happens again.</div>
+    <article class="card" style="--c:var(--orange);opacity:.75"><div class="ctop"><h3>Example: fell back asleep after the alarm</h3><span class="tag">Waking</span></div>
+    <div class="row"><em>Why it happened</em><p>Stayed in bed scrolling on my phone</p></div>
+    <div class="row lesson"><em>Lesson</em><p>The phone in bed is the trap, not the alarm</p></div>
+    <div class="row fix"><em>Next time I will</em><p>Charge the phone across the room</p></div></article>`;
+  }
+  h += `<input class="search" id="q" type="search" placeholder="Search your failures and lessons" value="${esc(query)}">`;
+  h += `<div class="chips"><button class="chip ${filter==='all'?'on':''}" data-f="all">All</button><button class="chip ${filter==='rep'?'on':''}" style="--c:var(--red)" data-f="rep">Repeating</button>${AREAS.map(a=>`<button class="chip ${filter===a.k?'on':''}" style="--c:${a.c}" data-f="${a.k}">${a.n}</button>`).join('')}</div>`;
+  const q = query.trim().toLowerCase();
+  const list = S.items.filter(i => filter==='all' || (filter==='rep' ? status(i)[0]==='rep' : i.area===filter))
+    .filter(i => !q || [i.what, i.lesson, i.fix, ...(i.whys||[])].join(' ').toLowerCase().includes(q))
+    .sort((a,b) => (b.repeats.at(-1)||b.date).localeCompare(a.repeats.at(-1)||a.date));
+  h += list.length ? list.map(card).join('') : `<div class="empty"><b>Nothing matches</b>Try another area or clear the search.</div>`;
+  return h;
+}
+
+function vAdd(){
+  const it = editing ? S.items.find(i => i.id === editing) : null;
+  const whys = it ? (it.whys.length ? it.whys : ['']) : Array(whyCount).fill('');
+  const sel = it ? it.area : 'wake';
+  return `<form id="f" novalidate>
+    <div class="formhead"><h2>${it ? 'Edit failure' : 'New failure'}</h2>${it ? '<button type="button" class="link" data-cancel="1">Cancel</button>' : ''}</div>
+    <label for="what">What went wrong?<input class="field" id="what" maxlength="140" placeholder="e.g. Read my presentation notes instead of speaking" value="${esc(it?.what)}"></label>
+    <p class="err" id="e-what" hidden>Write what went wrong first.</p>
+    <label>Area<div class="chips" id="areaChips">${AREAS.map(a=>`<button type="button" class="chip ${a.k===sel?'on':''}" style="--c:${a.c}" data-area="${a.k}">${a.n}</button>`).join('')}</div></label>
+    <label for="date">When<input class="field" id="date" type="date" max="${today()}" value="${it?.date || today()}"></label>
+    <div class="whys" id="whys">${whys.map((w,i)=>`<label for="why${i}">${i===0?'Why did it happen?':'Why did <i>that</i> happen?'}<textarea class="field" id="why${i}" placeholder="${i===0?'The real reason, not an excuse':'Dig one level deeper'}">${esc(w)}</textarea></label>`).join('')}</div>
+    <button type="button" class="link" data-morewhy="1">+ Ask why again (dig deeper)</button>
+    <label for="lesson">What's the lesson?<textarea class="field" id="lesson" placeholder="What did this teach you?">${esc(it?.lesson)}</textarea></label>
+    <p class="err" id="e-lesson" hidden>Write the lesson. It's the most important part.</p>
+    <label for="fix">Next time I will… <small>one small, specific action</small><textarea class="field" id="fix" placeholder="e.g. Practise the first 30 seconds out loud 3 times">${esc(it?.fix)}</textarea></label>
+    <button class="big" type="submit">${it ? 'Save changes' : 'Save to log'}</button>
+  </form>`;
+}
+
+function vReview(){
+  const n = S.items.length;
+  let h = `<p class="quote">${QUOTE}</p>`;
+  if(!n) return h + `<div class="empty"><b>Your review appears here</b>After you log a few failures, this screen shows which areas trip you up most and which mistakes keep coming back.</div>` + backup();
+  const byArea = AREAS.map(a => [a, S.items.filter(i => i.area === a.k).reduce((s,i)=>s+1+i.repeats.length,0)]).filter(x=>x[1]);
+  const max = Math.max(...byArea.map(x=>x[1]));
+  h += `<section class="box"><h2>Where failures happen</h2><div class="bars">${byArea.sort((a,b)=>b[1]-a[1]).map(([a,c])=>`<div class="bar" style="--c:${a.c}"><span>${a.n}</span><span class="t"><i style="width:${c/max*100}%"></i></span><b>${c}</b></div>`).join('')}</div><p class="meta">Counts include repeats.</p></section>`;
+  const worst = [...S.items].filter(i=>i.repeats.length).sort((a,b)=>b.repeats.length-a.repeats.length)[0];
+  if(worst) h += `<section class="box"><h2>Top repeat offender</h2>${card(worst)}<p class="meta">This one keeps coming back. Make its "next time" action even smaller.</p></section>`;
+  const wk = S.items.filter(i => daysSince(i.date) <= 6);
+  h += `<section class="box"><h2>This week's lessons</h2>${wk.length ? wk.map(i=>`<div class="row lesson"><em>${area(i.area).n} · ${fmt(i.date)}</em><p>${esc(i.lesson)}</p></div>`).join('') : '<p class="meta">No new failures logged in the last 7 days.</p>'}</section>`;
+  const learned = S.items.filter(i => status(i)[0]==='ok');
+  h += `<section class="box"><h2>Beaten</h2><p class="meta">A failure counts as learned after 14 days without it happening again.</p>${learned.length ? learned.map(i=>`<div class="row"><em style="color:var(--green)">${area(i.area).n}</em><p>${esc(i.what)}</p></div>`).join('') : '<p class="meta">None yet. Keep going.</p>'}</section>`;
+  return h + backup();
+}
+function backup(){ return `<section class="box"><h2>Backup</h2><p class="meta">Your log lives on this phone. Save a backup file every Sunday.</p><div class="acts"><button class="a" data-backup="1">Save backup</button><button class="a" data-restore="1">Restore</button></div></section>`; }
+
+function render(){
+  score();
+  document.querySelectorAll('.tab').forEach(x => x.classList.toggle('on', x.dataset.t === tab));
+  const v = document.getElementById('view');
+  v.innerHTML = {log:vLog, add:vAdd, review:vReview}[tab]();
+}
+function go(t){ tab = t; if(t !== 'add'){ editing = null; whyCount = 1; } confirmDel = null; render(); scrollTo(0,0); }
+
+function readForm(){
+  const whys = [...document.querySelectorAll('#whys textarea')].map(t => t.value.trim());
+  return {
+    what: document.getElementById('what').value.trim(),
+    area: document.querySelector('#areaChips .chip.on')?.dataset.area || 'life',
+    date: document.getElementById('date').value || today(),
+    whys, lesson: document.getElementById('lesson').value.trim(),
+    fix: document.getElementById('fix').value.trim()
+  };
+}
+
+document.addEventListener('click', e => {
+  const b = e.target.closest('button'); if(!b) return;
+  if(b.dataset.t){ go(b.dataset.t); return; }
+  if(b.dataset.f){ filter = b.dataset.f; render(); return; }
+  if(b.dataset.area){ document.querySelectorAll('#areaChips .chip').forEach(c => c.classList.toggle('on', c === b)); return; }
+  if(b.dataset.morewhy){ const box = document.getElementById('whys'), i = box.children.length; if(i >= 5){ toast('5 whys is the limit. You found the root.'); return; }
+    box.insertAdjacentHTML('beforeend', `<label for="why${i}">Why did <i>that</i> happen?<textarea class="field" id="why${i}" placeholder="Dig one level deeper"></textarea></label>`); document.getElementById('why'+i).focus(); return; }
+  if(b.dataset.cancel){ go('log'); return; }
+  if(b.dataset.again){ const it = S.items.find(i => i.id === b.dataset.again); if(!it.repeats.includes(today())) it.repeats.push(today()); save(); render(); toast('Logged. Read the lesson again.'); return; }
+  if(b.dataset.edit){ editing = b.dataset.edit; tab = 'add'; render(); scrollTo(0,0); return; }
+  if(b.dataset.del){ confirmDel = b.dataset.del; render(); return; }
+  if(b.dataset.delNo){ confirmDel = null; render(); return; }
+  if(b.dataset.delYes){ S.items = S.items.filter(i => i.id !== b.dataset.delYes); confirmDel = null; save(); render(); toast('Deleted'); return; }
+  if(b.dataset.backup){ const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([JSON.stringify(S)],{type:'application/json'})); a.download = 'failure-log-backup-' + today() + '.json'; a.click(); return; }
+  if(b.dataset.restore){ document.getElementById('restoreFile').click(); return; }
+});
+document.addEventListener('submit', e => {
+  e.preventDefault();
+  const d = readForm();
+  document.getElementById('e-what').hidden = !!d.what;
+  document.getElementById('e-lesson').hidden = !!d.lesson;
+  if(!d.what){ document.getElementById('what').focus(); return; }
+  if(!d.lesson){ document.getElementById('lesson').focus(); return; }
+  d.whys = d.whys.filter(Boolean);
+  if(editing){ Object.assign(S.items.find(i => i.id === editing), d); toast('Changes saved'); }
+  else { S.items.push({id: uid(), repeats: [], ...d}); toast('Logged. Lesson banked.'); }
+  save(); filter = 'all'; query = ''; go('log');
+});
+document.addEventListener('input', e => {
+  if(e.target.id === 'q'){ query = e.target.value; const pos = e.target.selectionStart; render(); const q = document.getElementById('q'); q.focus(); q.setSelectionRange(pos,pos); }
+  if(e.target.id === 'what') document.getElementById('e-what').hidden = true;
+  if(e.target.id === 'lesson') document.getElementById('e-lesson').hidden = true;
+});
+document.getElementById('restoreFile').addEventListener('change', e => {
+  const f = e.target.files[0]; if(!f) return;
+  f.text().then(t => { try{ const v = JSON.parse(t); if(!Array.isArray(v.items)) throw 0; S = v; save(); render(); toast('Backup restored'); }catch(err){ toast('That file is not a Failure Log backup'); } });
+  e.target.value = '';
+});
+
+load(); render();
+if('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
+</script>
+</body></html>

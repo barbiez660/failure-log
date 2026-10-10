@@ -84,6 +84,25 @@ textarea.field{min-height:84px;resize:vertical}
 .box{background:var(--panel);border-radius:18px;padding:16px;display:flex;flex-direction:column;gap:12px}
 .box h2{font-family:var(--display);font-weight:400;font-size:20px;text-transform:uppercase;margin:0;letter-spacing:.02em}
 .quote{font-size:15px;color:var(--muted);border-left:4px solid var(--gold);padding-left:12px;margin:0}
+.seg{display:grid;grid-template-columns:repeat(3,1fr);gap:4px;background:var(--panel);border-radius:14px;padding:4px}
+.seg button{border-radius:10px;padding:10px 4px;font-weight:700;font-size:14px;color:var(--muted);background:transparent}
+.seg button.on{background:var(--ink);color:var(--dark)}
+.headline{font-size:17px;font-weight:700;margin:0;line-height:1.4}
+.headline .g{color:var(--green)} .headline .r{color:var(--red)}
+.kpis{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.kpi{background:var(--panel);border-radius:16px;padding:12px 14px;display:flex;flex-direction:column;gap:2px;min-width:0}
+.kpi span{color:var(--muted);font-size:12px;text-transform:uppercase;letter-spacing:.06em}
+.kpi b{font-family:var(--display);font-weight:400;font-size:32px;line-height:1.1;font-variant-numeric:tabular-nums}
+.kpi small{font-size:12px;font-weight:700}
+.up-good,.down-good{color:var(--green)} .up-bad,.down-bad{color:var(--red)} .flat{color:var(--muted)}
+.legend{display:flex;gap:14px;font-size:13px;color:var(--muted);flex-wrap:wrap}
+.legend i{display:inline-block;width:12px;height:12px;border-radius:3px;margin-right:6px;vertical-align:-1px}
+.chart{width:100%;height:auto;display:block;touch-action:manipulation}
+.chart text{fill:var(--muted);font-family:var(--body);font-size:11px}
+.chart .hit{fill:transparent;cursor:pointer}
+.chart .col.sel .hl{fill:var(--panel2)}
+.tip{background:var(--panel2);border-radius:12px;padding:10px 12px;font-size:14px;min-height:44px}
+.tip b{color:var(--ink)}
 .save{font-size:11px;color:var(--muted);text-align:center}
 nav{position:fixed;left:0;right:0;bottom:0;z-index:6;background:var(--panel);border-top:1px solid var(--line);padding:8px 8px calc(8px + env(safe-area-inset-bottom,0px));display:flex;justify-content:center}
 nav .in{display:flex;gap:6px;max-width:540px;width:100%}
@@ -109,6 +128,7 @@ button:focus-visible,.field:focus-visible{outline:3px solid var(--gold);outline-
 <nav><div class="in">
   <button class="tab on" data-t="log" id="t-log">Log</button>
   <button class="tab" data-t="add" id="t-add">+ New</button>
+  <button class="tab" data-t="stats" id="t-stats">Stats</button>
   <button class="tab" data-t="review" id="t-review">Review</button>
 </div></nav>
 <input type="file" id="restoreFile" accept=".json,application/json" hidden>
@@ -229,13 +249,139 @@ function vReview(){
   h += `<section class="box"><h2>Beaten</h2><p class="meta">A failure counts as learned after 14 days without it happening again.</p>${learned.length ? learned.map(i=>`<div class="row"><em style="color:var(--green)">${area(i.area).n}</em><p>${esc(i.what)}</p></div>`).join('') : '<p class="meta">None yet. Keep going.</p>'}</section>`;
   return h + backup();
 }
+/* ---------- analytics ---------- */
+let period = 'week', selCol = null;
+const P = {
+  day:   {n:14, label:'Daily',   cur:'Today',      prev:'yesterday'},
+  week:  {n:8,  label:'Weekly',  cur:'This week',  prev:'last week'},
+  month: {n:6,  label:'Monthly', cur:'This month', prev:'last month'}
+};
+const addDays = (s,n) => { const d = new Date(s+'T12:00:00'); d.setDate(d.getDate()+n); return iso(d); };
+function bucketKey(s, p){
+  if(p==='day') return s;
+  if(p==='month') return s.slice(0,7);
+  const d = new Date(s+'T12:00:00'); const wd = (d.getDay()+6)%7; return addDays(s, -wd);
+}
+function buckets(p){
+  const out = []; let k = bucketKey(today(), p);
+  for(let i=0;i<P[p].n;i++){
+    out.unshift(k);
+    if(p==='day') k = addDays(k,-1);
+    else if(p==='week') k = addDays(k,-7);
+    else { const [y,m] = k.split('-').map(Number); k = m===1 ? `${y-1}-12` : `${y}-${String(m-1).padStart(2,'0')}`; }
+  }
+  return out;
+}
+function bucketLabel(k,p){
+  if(p==='day') return new Date(k+'T12:00:00').toLocaleDateString(undefined,{day:'numeric'}) ;
+  if(p==='week') return new Date(k+'T12:00:00').toLocaleDateString(undefined,{day:'numeric', month:'short'});
+  return new Date(k+'-15T12:00:00').toLocaleDateString(undefined,{month:'short'});
+}
+function bucketLong(k,p){
+  if(p==='day') return new Date(k+'T12:00:00').toLocaleDateString(undefined,{weekday:'long', day:'numeric', month:'long'});
+  if(p==='week') return 'Week of ' + new Date(k+'T12:00:00').toLocaleDateString(undefined,{day:'numeric', month:'long'});
+  return new Date(k+'-15T12:00:00').toLocaleDateString(undefined,{month:'long', year:'numeric'});
+}
+function events(){
+  const ev = [];
+  for(const it of S.items){
+    ev.push({t:'new', d:it.date, a:it.area});
+    for(const r of it.repeats) ev.push({t:'rep', d:r, a:it.area});
+    const last = it.repeats.length ? it.repeats[it.repeats.length-1] : it.date;
+    const won = addDays(last, 14);
+    if(won <= today()) ev.push({t:'won', d:won, a:it.area});
+  }
+  return ev;
+}
+function tally(ev, p){
+  const m = {};
+  for(const e of ev){ const k = bucketKey(e.d, p); (m[k] ||= {new:0, rep:0, won:0, areas:{}}); m[k][e.t]++; if(e.t!=='won') m[k].areas[e.a] = (m[k].areas[e.a]||0)+1; }
+  return m;
+}
+const rate = c => (c.new + c.rep) ? Math.round(c.rep / (c.new + c.rep) * 100) : null;
+function streak(){
+  const days = new Set(events().filter(e=>e.t!=='won').map(e=>e.d));
+  let n = 0, d = today(); if(!days.has(d)) d = addDays(d,-1);
+  while(days.has(d)){ n++; d = addDays(d,-1); }
+  return n;
+}
+function delta(cur, prev, lowerIsBetter, unit=''){
+  if(prev === null || cur === null) return `<small class="flat">No earlier data</small>`;
+  const diff = cur - prev;
+  if(diff === 0) return `<small class="flat">Same as ${P[period].prev}</small>`;
+  const good = lowerIsBetter ? diff < 0 : diff > 0;
+  const cls = lowerIsBetter === null ? 'flat' : (good ? 'up-good' : 'up-bad');
+  return `<small class="${cls}">${diff>0?'▲':'▼'} ${Math.abs(diff)}${unit} vs ${P[period].prev}</small>`;
+}
+
+function vStats(){
+  let h = `<div class="seg">${Object.entries(P).map(([k,v])=>`<button class="${k===period?'on':''}" data-period="${k}">${v.label}</button>`).join('')}</div>`;
+  if(!S.items.length) return h + `<div class="empty"><b>Your stats appear here</b>Log your first failure and this screen shows how you're doing each day, week and month: new failures, repeats, lessons that stuck, and your repeat rate.</div>`;
+  const ks = buckets(period), m = tally(events(), period);
+  const z = {new:0, rep:0, won:0, areas:{}};
+  const cur = m[ks.at(-1)] || z, prev = m[ks.at(-2)] || z;
+  const hasPrev = ks.slice(0,-1).some(k => m[k]);
+  const rc = rate(cur), rp = hasPrev ? rate(prev) : null;
+  const pl = P[period].cur.toLowerCase();
+  let line;
+  if(!cur.new && !cur.rep) line = `<span class="g">Clean so far ${pl}.</span> No failures and no repeats logged.`;
+  else line = `${P[period].cur}: ${cur.new} new, <span class="${cur.rep?'r':'g'}">${cur.rep} repeat${cur.rep===1?'':'s'}</span>${cur.won?`, <span class="g">${cur.won} beaten</span>`:''}.` + (rc!==null && rp!==null && rc!==rp ? ` Repeat rate ${rc<rp?'<span class="g">down':'<span class="r">up'}</span> from ${rp}% to ${rc}%.` : '');
+  h += `<p class="headline">${line}</p>`;
+  h += `<div class="kpis">
+    <div class="kpi"><span>New failures</span><b>${cur.new}</b>${delta(cur.new, hasPrev?prev.new:null, null)}</div>
+    <div class="kpi"><span>Repeats</span><b style="color:var(--red)">${cur.rep}</b>${delta(cur.rep, hasPrev?prev.rep:null, true)}</div>
+    <div class="kpi"><span>Lessons beaten</span><b style="color:var(--green)">${cur.won}</b>${delta(cur.won, hasPrev?prev.won:null, false)}</div>
+    <div class="kpi"><span>Repeat rate</span><b>${rc===null?'–':rc+'%'}</b>${rc===null?'<small class="flat">Nothing logged yet</small>':delta(rc, rp, true, ' pts')}</div>
+  </div>`;
+  h += `<section class="box"><h2>${P[period].label} trend</h2>
+    <div class="legend"><span><i style="background:var(--gold)"></i>New failures</span><span><i style="background:var(--red)"></i>Repeats</span></div>
+    ${chart(ks, m)}
+    <div class="tip" id="tip">${tipText(selCol ?? ks.at(-1), m)}</div>
+    <p class="meta">Tap a bar to see that ${period}. Fewer red bars over time means your lessons are sticking.</p></section>`;
+  const areasCur = Object.entries(cur.areas).sort((a,b)=>b[1]-a[1]);
+  if(areasCur.length){
+    const mx = areasCur[0][1];
+    h += `<section class="box"><h2>${P[period].cur}: by area</h2><div class="bars">${areasCur.map(([k,c])=>`<div class="bar" style="--c:${area(k).c}"><span>${area(k).n}</span><span class="t"><i style="width:${c/mx*100}%"></i></span><b>${c}</b></div>`).join('')}</div></section>`;
+  }
+  const s = streak();
+  h += `<section class="box"><h2>Review streak</h2><p class="headline">${s ? `<span class="g">${s} day${s===1?'':'s'}</span> in a row with an honest entry.` : 'No streak yet. Log tonight to start one.'}</p><p class="meta">Days in a row where you logged a failure or marked a repeat.</p></section>`;
+  return h;
+}
+function tipText(k, m){
+  const c = m[k] || {new:0, rep:0, won:0};
+  const r = rate(c);
+  return `<b>${bucketLong(k, period)}</b><br>${c.new} new · ${c.rep} repeat${c.rep===1?'':'s'} · ${c.won} beaten${r!==null?` · repeat rate ${r}%`:''}`;
+}
+function chart(ks, m){
+  const W = 340, H = 180, L = 26, R = 6, T = 10, B = 24;
+  const vals = ks.map(k => m[k] || {new:0, rep:0});
+  let max = Math.max(1, ...vals.map(v => Math.max(v.new, v.rep)));
+  const step = max <= 4 ? 1 : max <= 10 ? 2 : Math.ceil(max/5);
+  max = Math.ceil(max/step)*step;
+  const y = v => T + (H - T - B) * (1 - v/max);
+  const cw = (W - L - R) / ks.length, bw = Math.min(14, (cw - 6) / 2);
+  let s = `<svg class="chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="${P[period].label} new failures and repeats">`;
+  for(let v=0; v<=max; v+=step) s += `<line x1="${L}" x2="${W-R}" y1="${y(v)}" y2="${y(v)}" stroke="var(--line)" stroke-width="${v?0.5:1}"/><text x="${L-6}" y="${y(v)+4}" text-anchor="end">${v}</text>`;
+  const every = ks.length > 6 ? 2 : 1;
+  ks.forEach((k,i) => {
+    const x0 = L + i*cw, cx = x0 + cw/2, v = vals[i], sel = (selCol ?? ks.at(-1)) === k;
+    const bar = (val, x, col) => { if(!val) return ''; const top = y(val), bot = y(0); const h = bot - top; const r = Math.min(4, bw/2, h);
+      return `<path d="M${x} ${bot} V${top + r} Q${x} ${top} ${x + r} ${top} H${x + bw - r} Q${x + bw} ${top} ${x + bw} ${top + r} V${bot} Z" fill="${col}"/>`; };
+    s += `<g class="col ${sel?'sel':''}"><rect class="hl" x="${x0+1}" y="${T}" width="${cw-2}" height="${H-T-B}" rx="4" fill="transparent"/>`;
+    s += bar(v.new, cx - bw - 1, 'var(--gold)') + bar(v.rep, cx + 1, 'var(--red)');
+    if(i % every === (ks.length-1) % every) s += `<text x="${cx}" y="${H-8}" text-anchor="middle" ${sel?'style="fill:var(--ink);font-weight:700"':''}>${bucketLabel(k, period)}</text>`;
+    s += `<rect class="hit" data-col="${k}" x="${x0}" y="0" width="${cw}" height="${H}"/></g>`;
+  });
+  return s + `</svg>`;
+}
+
 function backup(){ return `<section class="box"><h2>Backup</h2><p class="meta">Your log lives on this phone. Save a backup file every Sunday.</p><div class="acts"><button class="a" data-backup="1">Save backup</button><button class="a" data-restore="1">Restore</button></div></section>`; }
 
 function render(){
   score();
   document.querySelectorAll('.tab').forEach(x => x.classList.toggle('on', x.dataset.t === tab));
   const v = document.getElementById('view');
-  v.innerHTML = {log:vLog, add:vAdd, review:vReview}[tab]();
+  v.innerHTML = {log:vLog, add:vAdd, stats:vStats, review:vReview}[tab]();
 }
 function go(t){ tab = t; if(t !== 'add'){ editing = null; whyCount = 1; } confirmDel = null; render(); scrollTo(0,0); }
 
@@ -251,7 +397,10 @@ function readForm(){
 }
 
 document.addEventListener('click', e => {
+  const hit = e.target.closest('[data-col]');
+  if(hit){ selCol = hit.dataset.col; render(); return; }
   const b = e.target.closest('button'); if(!b) return;
+  if(b.dataset.period){ period = b.dataset.period; selCol = null; render(); return; }
   if(b.dataset.t){ go(b.dataset.t); return; }
   if(b.dataset.f){ filter = b.dataset.f; render(); return; }
   if(b.dataset.area){ document.querySelectorAll('#areaChips .chip').forEach(c => c.classList.toggle('on', c === b)); return; }
